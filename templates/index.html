@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>傻狗bot</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h2>傻狗bot</h2>
+    <form id="searchForm">
+        <input type="text" class="form-control" name="keyword" placeholder="请输入电影名" required>
+        <button type="submit" class="btn btn-primary mt-2">搜索</button>
+    </form>
+    <div id="results" class="mt-4"></div>
+</div>
+<script>
+let searchId = null;
+let pollTimer = null;
+
+function renderResults(data) {
+    let html = '';
+    if (data && data.all_links && data.all_links.length > 0) {
+        for (let item of data.all_links) {
+            html += `<div class="p-3 border mb-3">`;
+            if (typeof item === 'object' && item !== null) {
+                if (item.title) {
+                    html += `${item.title}<br>`;
+                }
+                if (item.links) {
+                    if (Array.isArray(item.links)) {
+                        for (let link of item.links) {
+                            html += `链接：${link}<br>`;
+                        }
+                    } else {
+                        html += `链接：${item.links}<br>`;
+                    }
+                }
+            } else {
+                html += `${item}<br>`;
+            }
+            html += '</div><hr>';
+        }
+    } else {
+        html = '正在检索...';
+    }
+    document.getElementById('results').innerHTML = html;
+}
+
+document.getElementById('searchForm').onsubmit = function(e){
+    e.preventDefault();
+    document.getElementById('results').innerHTML = '正在检索...';
+    if (pollTimer) clearInterval(pollTimer);
+    fetch('/search', {
+        method: 'POST',
+        body: new FormData(this)
+    }).then(r=>r.json()).then(data=>{
+        searchId = data.search_id;
+        pollTimer = setInterval(function(){
+            fetch('/progress/' + searchId)
+                .then(r=>r.json())
+                .then(data=>{
+                    renderResults(data);
+                    // 如果你想在所有函数都完成后停止轮询，可以加判断
+                });
+        }, 1000);
+    });
+}
+</script>
+</body>
+</html> 
